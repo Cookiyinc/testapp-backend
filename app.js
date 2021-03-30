@@ -9,19 +9,6 @@ const MongoClient = require('mongodb').MongoClient;
 const uri = "mongodb+srv://DanielChung:Fufupapachon23@cluster0.6z8gr.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
 
-
-
-// client.connect(async(err) => {
-//   const collection = client.db("test").collection("devices");
-//   const user = {
-//       name: "Daniel Chung",
-//       email: "dec8768@rit.edu",
-//       test: true,
-//   }
-//   await collection.insertOne(user);
-//   client.close();
-// });
-
 app.use(cors());
 app.use(express.json());
 
@@ -66,16 +53,30 @@ app.post('/pinterest', (req, res) => {
     res.sendStatus(200);
 })
 
-//TODO: Login authenthicates if it finds user. 
+
+app.get("saved", (req, res) => {
+    console.log(req.body);
+});
+
+
 app.post('/login', (req, res) => {
     const {username: usernameDB, password: passwordDB} = req.body;
-    client.connect(async (err) => {
-        const collection = client.db("cookiy-testapp").collection("users");
-        const user = await collection.findOne({username: usernameDB, password: passwordDB});
-        console.log(user);
-        console.log("Exists user");
-        client.close();
-    });
+    console.log(usernameDB, passwordDB);
+    if (usernameDB != null || password != null){
+        client.connect(async (err) => {
+            const collection = client.db("cookiy-testapp").collection("users");
+            const user = await collection.findOne({username: usernameDB, password: passwordDB});
+            if (user){
+                console.log(user);
+                console.log("Exists user");
+                res.sendStatus(200);
+                client.close();
+            }
+            else{
+                res.sendStatus(404);
+            }
+        });
+    }
 });
 
 app.post('/signup', (req, res) => {
@@ -90,20 +91,32 @@ app.post('/signup', (req, res) => {
                     email: emailDB,
                     username: usernameDB,
                     password: passwordDB,
+                    recipes: [],
+                    followers: [],
+                    following: [],
+                    cookbooks: []
                 }
-                await collection.insertOne(user);
-                client.close();
-                console.log(req.body);
-                console.log("User has been added");
-                res.send(201);
+                const existsEmail = await collection.findOne({email: emailDB});
+                const existsUsername = await collection.findOne({username: usernameDB});
+                if (!existsEmail && !existsUsername){
+                    await collection.insertOne(user);
+                    client.close();
+                    console.log(req.body);
+                    console.log("User has been added");
+                    res.sendStatus(201);
+                }
+                else{
+                    res.sendStatus(400);
+                    console.log("user already exists");
+                }
             });
         }
         else{
-            res.send(406);
+            res.sendStatus(406);
         }
     }
     else {
-        res.send(409);
+        res.sendStatus(409);
     }
 });
 
