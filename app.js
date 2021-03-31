@@ -18,21 +18,40 @@ app.get('/', (req, res) => {
 
 app.post('/allrecipes', (req, res) => {
     let url = req.body.linkUrl;
-
+    const user = req.body.user;
     request(url, (error, response, html) => {
         if (!error && response.statusCode == 200) {
             const $ = cheerio.load(html);
             let title = $('.headline-wrapper').text().trim();
             let ingredientList = [];
+            let instructionList = [];
             let picture = $('div[class="image-container"]').children().attr('data-src');
             $(".ingredients-section li").each((i, el) => {
                 ingredientList.push($(el).text().trim());
             });
+            $(".instructions-section p").each((i, el) => {
+                instructionList.push($(el).text());
+            });
 
-            console.log(title);
-            console.log(picture);
-            console.log(ingredientList);
+            const recipe = {
+                title: title, 
+                pictureLink: picture,
+                ingredientList: ingredientList,
+                instructionList: instructionList
+            }
 
+            client.connect(async (err) => {
+                const collection = client.db("cookiy-testapp").collection("users");
+                const query = {username: user};
+                const recipeQuery = {$push: {recipes: recipe}};
+                collection.updateOne(query, recipeQuery, (err, res) => {
+                    if (err) throw err;
+                    console.log("1 recipe added");
+                });
+            });
+
+            console.log(user)
+            console.log(recipe);
         }
     });
     res.sendStatus(200);
@@ -54,8 +73,16 @@ app.post('/pinterest', (req, res) => {
 })
 
 
-app.get("saved", (req, res) => {
-    console.log(req.body);
+app.get("/saved?:user", (req, res) => {
+    const user = req.query.user;
+    console.log(user);
+    console.log("call from a saved api")
+    client.connect(async (err) => {
+        const collection = client.db("cookiy-testapp").collection("users");
+        const userSaved = await collection.findOne({username: user});
+        console.log(userSaved.username + " has " + (userSaved.recipes.length).toString() + " recipes.");
+        res.send(userSaved.recipes);
+    });
 });
 
 
@@ -70,7 +97,6 @@ app.post('/login', (req, res) => {
                 console.log(user);
                 console.log("Exists user");
                 res.sendStatus(200);
-                client.close();
             }
             else{
                 res.sendStatus(404);
