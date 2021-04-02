@@ -2,9 +2,9 @@ const express = require('express');
 const app = express();
 const port = 4000;
 const cors = require('cors');
-const axios = require("axios");
 const cheerio = require('cheerio');
 const request = require('request');
+const uuid = require('uuid');
 const MongoClient = require('mongodb').MongoClient;
 const uri = "mongodb+srv://DanielChung:Fufupapachon23@cluster0.6z8gr.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
@@ -16,7 +16,7 @@ app.get('/', (req, res) => {
     res.send("This is cookiy testapp back-end");
 });
 
-app.post('/allrecipes', (req, res) => {
+app.put('/allrecipes', (req, res) => {
     let url = req.body.linkUrl;
     const user = req.body.user;
     request(url, (error, response, html) => {
@@ -32,14 +32,14 @@ app.post('/allrecipes', (req, res) => {
             $(".instructions-section p").each((i, el) => {
                 instructionList.push($(el).text());
             });
-
+            let id = uuid.v4()
             const recipe = {
+                _id: id,
                 title: title, 
                 pictureLink: picture,
                 ingredientList: ingredientList,
                 instructionList: instructionList
             }
-
             client.connect(async (err) => {
                 const collection = client.db("cookiy-testapp").collection("users");
                 const query = {username: user};
@@ -75,8 +75,6 @@ app.post('/pinterest', (req, res) => {
 
 app.get("/saved?:user", (req, res) => {
     const user = req.query.user;
-    console.log(user);
-    console.log("call from a saved api")
     client.connect(async (err) => {
         const collection = client.db("cookiy-testapp").collection("users");
         const userSaved = await collection.findOne({username: user});
