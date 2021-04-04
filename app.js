@@ -7,7 +7,7 @@ const request = require('request');
 const uuid = require('uuid');
 const MongoClient = require('mongodb').MongoClient;
 const uri = "mongodb+srv://DanielChung:Fufupapachon23@cluster0.6z8gr.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true });
+const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: false });
 
 app.use(cors());
 app.use(express.json());
@@ -36,22 +36,26 @@ app.put('/allrecipes', (req, res) => {
             const recipe = {
                 _id: id,
                 title: title, 
+                user: user,
                 pictureLink: picture,
                 ingredientList: ingredientList,
                 instructionList: instructionList
             }
+            const recipeID = {
+                _id: id
+            }
             client.connect(async (err) => {
                 const collection = client.db("cookiy-testapp").collection("users");
+                const recipes = client.db("cookiy-testapp").collection("recipes");
                 const query = {username: user};
-                const recipeQuery = {$push: {recipes: recipe}};
-                collection.updateOne(query, recipeQuery, (err, res) => {
+                await recipes.insertOne(recipe);
+                const recipeQuery = {$push: {recipes: recipeID}};
+                await collection.updateOne(query, recipeQuery, (err, res) => {
                     if (err) throw err;
                     console.log("1 recipe added");
                 });
             });
 
-            console.log(user)
-            console.log(recipe);
         }
     });
     res.sendStatus(200);
@@ -59,7 +63,6 @@ app.put('/allrecipes', (req, res) => {
 
 app.post('/pinterest', (req, res) => {
     let url = req.body.linkUrl;
-
     request(url, (error, response, html) => {
         if (!error && response.statusCode == 200) {
             const $ = cheerio.load(html);
@@ -67,19 +70,23 @@ app.post('/pinterest', (req, res) => {
             console.log(title);
         }
     });
-
     console.log(req.body);
     res.sendStatus(200);
 })
 
 
-app.get("/saved?:user", (req, res) => {
+app.get("/saved?:user",(req, res) => {
     const user = req.query.user;
+    console.log(user);
+    let recipes = [];
     client.connect(async (err) => {
-        const collection = client.db("cookiy-testapp").collection("users");
-        const userSaved = await collection.findOne({username: user});
-        console.log(userSaved.username + " has " + (userSaved.recipes.length).toString() + " recipes.");
-        res.send(userSaved.recipes);
+        const collection = client.db("cookiy-testapp").collection("recipes");
+        const userSaved = await collection.find({"user": user})
+        .forEach((recipe)=>{
+            recipes.push(recipe)
+        });
+        console.log(recipes);
+        res.send(recipes);
     });
 });
 
@@ -97,13 +104,14 @@ app.post('/login', (req, res) => {
                 res.sendStatus(200);
             }
             else{
+                console.log("Wrong credentials");
                 res.sendStatus(404);
             }
         });
     }
 });
 
-app.post('/signup', (req, res) => {
+app.post('/signup',(req, res) => {
     const { name: nameDB, last: lastDB, email: emailDB, username: usernameDB, password: passwordDB, passwordVerification: passwordVerDB} = req.body;
     if(passwordDB == passwordVerDB){
         if(lastDB != '' && nameDB != '' && emailDB != '' && usernameDB != ''){
@@ -121,10 +129,10 @@ app.post('/signup', (req, res) => {
                     cookbooks: []
                 }
                 const existsEmail = await collection.findOne({email: emailDB});
+                console.log(existsEmail);
                 const existsUsername = await collection.findOne({username: usernameDB});
                 if (!existsEmail && !existsUsername){
                     await collection.insertOne(user);
-                    client.close();
                     console.log(req.body);
                     console.log("User has been added");
                     res.sendStatus(201);
