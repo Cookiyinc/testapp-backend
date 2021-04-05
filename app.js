@@ -32,14 +32,22 @@ app.put('/allrecipes', (req, res) => {
             $(".instructions-section p").each((i, el) => {
                 instructionList.push($(el).text());
             });
-            let id = uuid.v4()
+            let id = uuid.v4();
+            let times = [];
+            $('.recipe-meta-item-body').each((i, el) => {
+                times.push($(el).text().trim());
+            });
+            let totalTime = times[2];
+            let totalServings = times[3];
             const recipe = {
                 _id: id,
                 title: title, 
                 user: user,
                 pictureLink: picture,
                 ingredientList: ingredientList,
-                instructionList: instructionList
+                instructionList: instructionList,
+                time: totalTime,
+                servings: totalServings
             }
             const recipeID = {
                 _id: id
@@ -87,6 +95,16 @@ app.get("/saved?:user",(req, res) => {
         });
         console.log(recipes);
         res.send(recipes);
+    });
+});
+
+app.get("/profile?:user",(req, res) => {
+    const user = req.query.user;
+    client.connect(async (err) => {
+        const collection = client.db("cookiy-testapp").collection("users");
+        const userSaved = await collection.findOne({"username": user})
+        console.log(userSaved);
+        res.json(userSaved);
     });
 });
 
