@@ -5,6 +5,7 @@ const cors = require('cors');
 const cheerio = require('cheerio');
 const request = require('request');
 const uuid = require('uuid');
+const Webscraper = require('./Webscraper');
 const MongoClient = require('mongodb').MongoClient;
 const uri = "mongodb+srv://DanielChung:Fufupapachon23@cluster0.6z8gr.mongodb.net/myFirstDatabase?retryWrites=true&w=majority";
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: false });
@@ -17,56 +18,31 @@ app.get('/', (req, res) => {
 });
 
 app.put('/allrecipes', (req, res) => {
-    let url = req.body.linkUrl;
+    const url = req.body.linkUrl;
     const user = req.body.user;
-    request(url, (error, response, html) => {
-        if (!error && response.statusCode == 200) {
-            const $ = cheerio.load(html);
-            let title = $('.headline-wrapper').text().trim();
-            let ingredientList = [];
-            let instructionList = [];
-            let picture = $('div[class="image-container"]').children().attr('data-src');
-            $(".ingredients-section li").each((i, el) => {
-                ingredientList.push($(el).text().trim());
-            });
-            $(".instructions-section p").each((i, el) => {
-                instructionList.push($(el).text());
-            });
-            let id = uuid.v4();
-            let times = [];
-            $('.recipe-meta-item-body').each((i, el) => {
-                times.push($(el).text().trim());
-            });
-            let totalTime = times[2];
-            let totalServings = times[3];
-            const recipe = {
-                _id: id,
-                title: title, 
-                user: user,
-                pictureLink: picture,
-                ingredientList: ingredientList,
-                instructionList: instructionList,
-                time: totalTime,
-                servings: totalServings
-            }
-            const recipeID = {
-                _id: id
-            }
-            client.connect(async (err) => {
-                const collection = client.db("cookiy-testapp").collection("users");
-                const recipes = client.db("cookiy-testapp").collection("recipes");
-                const query = {username: user};
-                await recipes.insertOne(recipe);
-                const recipeQuery = {$push: {recipes: recipeID}};
-                await collection.updateOne(query, recipeQuery, (err, res) => {
-                    if (err) throw err;
-                    console.log("1 recipe added");
-                });
-            });
-
-        }
+    const recipe = Webscraper.allRecipes(url, user);
+    const recipeID = {
+        _id: recipe._id
+    }
+    client.connect(async (err) => {
+        const collection = client.db("cookiy-testapp").collection("users");
+        const recipes = client.db("cookiy-testapp").collection("recipes");
+        const query = {username: user};
+        await recipes.insertOne(recipe);
+        const recipeQuery = {$push: {recipes: recipeID}};
+        await collection.updateOne(query, recipeQuery, (err, res) => {
+            if (err) throw err;
+            console.log("1 recipe added");
+        });
     });
     res.sendStatus(200);
+})
+
+app.put('/foodnetwork', (req, res)=> {
+    const url = req.body.linkUrl;
+    const user = req.body.user;
+    const recipe = Webscraper.foodNetwork(url, user);
+    console.log(recipe);
 })
 
 app.post('/pinterest', (req, res) => {
@@ -171,6 +147,6 @@ app.post('/signup',(req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`)
+    console.log(`Cookiy app listening at http://localhost:${port}`)
 })
 
