@@ -126,6 +126,24 @@ app.put('/foodnetwork', (req, res)=> {
     res.sendStatus(200);
 });
 
+app.delete('/deleterecipe', (req, res)=> {
+    const user = req.body.user;
+    const recipeID = req.body.recipeID;
+    client.connect(async (err) => {
+        const recipeCollection = client.db("cookiy-testapp").collection("recipes");
+        const userCollection = client.db("cookiy-testapp").collection("users");
+        const query = {username: user};
+        const recipeQuery = {_id: recipeID};
+        const deleteQuery = {$pull: {recipes:{_id: recipeID}}}
+        await recipeCollection.deleteOne(recipeQuery);
+        await userCollection.updateOne(query, deleteQuery, (err, res)=> {
+            if (err) throw err;
+            console.log("1 recipe deleted.")
+        });
+    });
+    res.sendStatus(200);
+});
+
 app.post('/pinterest', (req, res) => {
     let url = req.body.linkUrl;
     request(url, (error, response, html) => {
@@ -133,16 +151,12 @@ app.post('/pinterest', (req, res) => {
             const $ = cheerio.load(html);
             let title = $('.lH1.dyH.iFc.ky3.pBj.DrD.IZT').text();
             console.log(title);
+            let picture = $()
         }
     });
     console.log(req.body);
     res.sendStatus(200);
 });
-
-app.put('/food', (req, res) => {
-    
-});
-
 
 app.get("/saved?:user",(req, res) => {
     const user = req.query.user;
