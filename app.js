@@ -144,18 +144,13 @@ app.delete('/deleterecipe', (req, res)=> {
     res.sendStatus(200);
 });
 
-app.post('/pinterest', (req, res) => {
-    let url = req.body.linkUrl;
-    request(url, (error, response, html) => {
-        if (!error && response.statusCode == 200) {
-            const $ = cheerio.load(html);
-            let title = $('.lH1.dyH.iFc.ky3.pBj.DrD.IZT').text();
-            console.log(title);
-            let picture = $()
-        }
+app.get('/getRecipe', (req, res) => {
+    const recipeID = req.query.id;
+    client.connect( async (err)=>{
+        const collection = client.db("cookiy-testapp").collection("recipes");
+        const recipe = await collection.find({"_id": recipeID});
+        res.send(recipe);
     });
-    console.log(req.body);
-    res.sendStatus(200);
 });
 
 app.get("/saved?:user",(req, res) => {
