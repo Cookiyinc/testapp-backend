@@ -144,12 +144,14 @@ app.delete('/deleterecipe', (req, res)=> {
     res.sendStatus(200);
 });
 
-app.get('/getRecipe', (req, res) => {
-    const recipeID = req.query.id;
+app.get('/getRecipe?:id', (req, res) => {
+    let recipeID = req.query.id;
+    console.log(recipeID);
     client.connect( async (err)=>{
         const collection = client.db("cookiy-testapp").collection("recipes");
-        const recipe = await collection.find({"_id": recipeID});
-        res.send(recipe);
+        const recipe = await collection.findOne({"_id": recipeID});
+        console.log(recipe);
+        res.json(recipe);
     });
 });
 
