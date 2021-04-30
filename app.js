@@ -180,7 +180,6 @@ app.get("/profile?:user",(req, res) => {
     });
 });
 
-
 app.post('/login', (req, res) => {
     const {username: usernameDB, password: passwordDB} = req.body;
     console.log(usernameDB, passwordDB);
